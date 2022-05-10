@@ -1,23 +1,18 @@
 #[macro_use]
 extern crate penrose;
 
-use penrose::{
-    core::{
-        bindings::KeyEventHandler,
-        config::Config,
-        helpers::index_selectors,
-        manager::WindowManager,
-        hooks::Hooks,
-    },
-    logging_error_handler,
-    xcb::new_xcb_backed_window_manager,
-    Backward, Forward, Less, More, Selector
-};
+use penrose::{Backward, core::{
+    config::Config,
+    helpers::index_selectors,
+    hooks::Hooks,
+}, Forward, Less, logging_error_handler, More, Selector, WindowManager, xcb::new_xcb_backed_window_manager, Xid};
 use penrose::draw::{Color, dwm_bar, TextStyle};
 use penrose::xcb::XcbDraw;
-
 use simplelog::{LevelFilter, SimpleLogger};
 
+use crate::hooks::CenterFloatTitle;
+
+mod hooks;
 
 // Replace these with your preferred terminal and program launcher
 const TERMINAL: &str = "alacritty";
@@ -28,8 +23,6 @@ const BLACK: &str = "#282828";
 const WHITE: &str = "#ebdbb2";
 const GREY: &str = "#3c3836";
 const BLUE: &str = "#458588";
-
-
 
 fn main() -> penrose::Result<()> {
     // Initialise the logger (use LevelFilter::Debug to enable debug logging)
@@ -45,7 +38,26 @@ fn main() -> penrose::Result<()> {
         padding: (2.0, 2.0),
     };
 
-    let config = Config::default();
+    let floating_classes = vec![
+        "rofi",
+        "penrose-menu",
+        "dmenu",
+        "dunst",
+        "pinentry-gtk-2",
+        "floating",
+    ];
+
+    let config = Config::default()
+        .builder()
+        .top_bar(true)
+        .workspaces(vec!["1", "2", "3", "4", "5", "6", "7", "8", "9"])
+        .border_px(6)
+        .focused_border(BLUE).unwrap()
+        .floating_classes(floating_classes)
+        .gap_px(0)
+        .build()
+        .unwrap();
+
     let hooks: Hooks<_> = vec![
         Box::new(dwm_bar(
             XcbDraw::new()?,
@@ -54,9 +66,9 @@ fn main() -> penrose::Result<()> {
             Color::try_from(BLUE)?, // highlight
             Color::try_from(GREY)?, // empty_ws
             config.workspaces().clone(),
-        )?)
+        )?),
+        CenterFloatTitle::new("win0", 0.9)
     ];
-
 
     let key_bindings = gen_keybindings! {
         // Program launchers
